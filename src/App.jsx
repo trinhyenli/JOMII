@@ -4,12 +4,14 @@ import Login from './pages/Login.jsx';
 import UserApp from './pages/UserApp.jsx';
 import Admin from './pages/Admin.jsx';
 import { HugLogo } from './components/Icons.jsx';
+import { LangProvider, useLang } from './lib/i18n.jsx';
 
-function Splash({ text }) {
+function Splash({ k }) {
+  const { t } = useLang();
   return (
     <div className="lg splash">
       <HugLogo size={64} className="hug-big" />
-      <p>{text}</p>
+      <p>{t[k]}</p>
     </div>
   );
 }
@@ -28,6 +30,10 @@ function Setup() {
 }
 
 export default function App() {
+  return <LangProvider><Root /></LangProvider>;
+}
+
+function Root() {
   const [session, setSession] = useState(undefined);
   const [profile, setProfile] = useState(null);
   const [asUser, setAsUser] = useState(false);
@@ -46,9 +52,9 @@ export default function App() {
   }, [session]);
 
   if (!configured) return <Setup />;
-  if (session === undefined) return <Splash text="Đang mở JOMI…" />;
+  if (session === undefined) return <Splash k="splashOpen" />;
   if (!session) return <Login />;
-  if (!profile) return <Splash text="Đang mở hộp thư của bạn…" />;
+  if (!profile) return <Splash k="splashBox" />;
 
   const signOut = () => supabase.auth.signOut();
   if (profile.role === 'admin' && !asUser) return <Admin profile={profile} onSignOut={signOut} onViewUser={() => setAsUser(true)} />;

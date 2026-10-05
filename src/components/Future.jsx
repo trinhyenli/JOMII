@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
-import { supabase, viError } from '../lib/supabase.js';
+import { supabase, errText } from '../lib/supabase.js';
+import { useLang } from '../lib/i18n.jsx';
 import { fmtDate } from '../lib/constants.js';
 import { IconLock } from './Icons.jsx';
 import { LETTER_FIELDS } from './Feed.jsx';
 
-const PRESETS = [['week', '1 tuần'], ['month', '1 tháng'], ['year', '1 năm'], ['custom', 'Tuỳ chọn']];
+const PRESETS = [['week', 'p1w'], ['month', 'p1m'], ['year', 'p1y'], ['custom', 'pCustom']];
+const UNITS = [['ngày', 'uDay'], ['tuần', 'uWeek'], ['tháng', 'uMonth'], ['năm', 'uYear']];
 
 function openDate(preset, n, unit) {
   const d = new Date();
@@ -20,6 +22,7 @@ function openDate(preset, n, unit) {
 }
 
 export default function Future({ ctx, refreshKey }) {
+  const { t, f: tf } = useLang();
   const [draft, setDraft] = useState('');
   const [preset, setPreset] = useState('month');
   const [n, setN] = useState('3');
@@ -37,9 +40,9 @@ export default function Future({ ctx, refreshKey }) {
     const body = draft.trim();
     if (body.length < 5) return;
     const { error } = await supabase.from('letters').insert({ kind: 'future', body, open_at: at.toISOString(), mood: 'Thư tương lai', paper: 'xanh', stamp: 'may' });
-    if (error) { ctx.toast(viError(error)); return; }
+    if (error) { ctx.toast(errText(error, t)); return; }
     setDraft(''); setReload((r) => r + 1);
-    ctx.toast(`Đã niêm phong. Hẹn gặp lại vào ${fmtDate(at)}.`);
+    ctx.toast(tf('tSealed', { d: fmtDate(at) }));
   }
 
   const now = Date.now();
@@ -48,37 +51,37 @@ export default function Future({ ctx, refreshKey }) {
       <div className="two-col">
         <div className="col-main">
           <div>
-            <p className="eyebrow">Thư tương lai</p>
-            <h1 className="display h-md">Gửi mình của sau này,</h1>
-            <p className="lead" style={{ marginTop: 10 }}>Lá thư được niêm phong và chỉ mở ra đúng ngày bạn chọn. Chỉ mình bạn đọc được.</p>
+            <p className="eyebrow">{t.future}</p>
+            <h1 className="display h-md">{t.toFutureMe}</h1>
+            <p className="lead" style={{ marginTop: 10 }}>{t.futureLead}</p>
           </div>
-          <label htmlFor="future-body" className="sr">Nội dung thư gửi tương lai</label>
-          <textarea id="future-body" className="write-area lined sheet paper-xanh pat-lines" maxLength={2000} placeholder="Bây giờ mình đang…"
+          <label htmlFor="future-body" className="sr">{t.futureContent}</label>
+          <textarea id="future-body" className="write-area lined sheet paper-xanh pat-lines" maxLength={2000} placeholder={t.futurePh}
             value={draft} onChange={(e) => setDraft(e.target.value)} style={{ height: 432, paddingRight: 40 }} />
         </div>
         <aside className="panel col-side">
-          <span className="label">Mở thư sau</span>
-          <div className="grid-2" role="group" aria-label="Thời gian mở thư">
-            {PRESETS.map(([id, label]) => <button key={id} className={preset === id ? 'chip is-on' : 'chip'} aria-pressed={preset === id} onClick={() => setPreset(id)}>{label}</button>)}
+          <span className="label">{t.openAfter}</span>
+          <div className="grid-2" role="group" aria-label={t.openWhen}>
+            {PRESETS.map(([id, label]) => <button key={id} className={preset === id ? 'chip is-on' : 'chip'} aria-pressed={preset === id} onClick={() => setPreset(id)}>{t[label]}</button>)}
           </div>
           {preset === 'custom' && (
             <div className="grid-2">
-              <div className="fieldset"><label htmlFor="custom-n" className="small-lbl">Số</label>
+              <div className="fieldset"><label htmlFor="custom-n" className="small-lbl">{t.number}</label>
                 <input id="custom-n" className="field" type="number" min="1" max="99" value={n} onChange={(e) => setN(e.target.value)} /></div>
-              <div className="fieldset"><label htmlFor="custom-unit" className="small-lbl">Đơn vị</label>
+              <div className="fieldset"><label htmlFor="custom-unit" className="small-lbl">{t.unit}</label>
                 <select id="custom-unit" className="field" value={unit} onChange={(e) => setUnit(e.target.value)}>
-                  {['ngày', 'tuần', 'tháng', 'năm'].map((u) => <option key={u} value={u}>{u}</option>)}
+                  {UNITS.map(([u, k]) => <option key={u} value={u}>{t[k]}</option>)}
                 </select></div>
             </div>
           )}
-          <div className="date-box"><span>Lá thư sẽ mở vào</span><span className="display">{fmtDate(at)}</span></div>
-          <button className="btn btn-primary wide" onClick={submit} disabled={draft.trim().length < 5}>Niêm phong &amp; gửi</button>
+          <div className="date-box"><span>{t.opensOnLbl}</span><span className="display">{fmtDate(at)}</span></div>
+          <button className="btn btn-primary wide" onClick={submit} disabled={draft.trim().length < 5}>{t.sealSend}</button>
         </aside>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-        <h2 className="display" style={{ margin: 0, fontSize: 26, fontWeight: 600 }}>Thư đang chờ bạn</h2>
-        {list.length === 0 && <p className="empty" style={{ padding: '16px 0', textAlign: 'left' }}>Bạn chưa gửi thư nào cho tương lai.</p>}
+        <h2 className="display" style={{ margin: 0, fontSize: 26, fontWeight: 600 }}>{t.waiting}</h2>
+        {list.length === 0 && <p className="empty" style={{ padding: '16px 0', textAlign: 'left' }}>{t.noFuture}</p>}
         <div className="grid-cards">
           {list.map((f) => {
             const ready = new Date(f.open_at).getTime() <= now;
@@ -87,11 +90,11 @@ export default function Future({ ctx, refreshKey }) {
               <div key={f.id} className="future-card">
                 <div className="card-flap"><span className="card-seal" /></div>
                 <div style={{ padding: '24px 20px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <span style={{ fontSize: 13, color: 'var(--muted)' }}>Viết ngày {fmtDate(f.created_at)}</span>
-                  <span className="display" style={{ fontSize: 20, fontWeight: 600 }}>Mở vào {fmtDate(f.open_at)}</span>
+                  <span style={{ fontSize: 13, color: 'var(--muted)' }}>{t.writtenOn} {fmtDate(f.created_at)}</span>
+                  <span className="display" style={{ fontSize: 20, fontWeight: 600 }}>{t.openOn} {fmtDate(f.open_at)}</span>
                   {ready
-                    ? <button className="btn btn-primary" style={{ alignSelf: 'flex-start', height: 44 }} onClick={() => ctx.openLetter(f, 'future')}>Đã đến — mở thư</button>
-                    : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, color: 'var(--muted)' }}><IconLock size={16} />Còn {days} ngày</span>}
+                    ? <button className="btn btn-primary" style={{ alignSelf: 'flex-start', height: 44 }} onClick={() => ctx.openLetter(f, 'future')}>{t.arrivedOpen}</button>
+                    : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, color: 'var(--muted)' }}><IconLock size={16} />{tf('daysLeft', { n: days })}</span>}
                 </div>
               </div>
             );

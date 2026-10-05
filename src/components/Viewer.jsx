@@ -1,15 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
-import { supabase, viError } from '../lib/supabase.js';
-import { moodLabel, timeAgo, fmtDate } from '../lib/constants.js';
+import { supabase, errText } from '../lib/supabase.js';
+import { useLang } from '../lib/i18n.jsx';
+import { fmtDate } from '../lib/constants.js';
 import { IconClose, IconBookmark, IconHeart, IconReply, IconFlip, IconMusic, IconFlag } from './Icons.jsx';
 
-const REASONS = ['Ngôn từ xúc phạm', 'Spam / quảng cáo', 'Lộ thông tin cá nhân', 'Nội dung không phù hợp'];
+// Lý do lưu vào DB bằng tiếng Việt để admin đọc; hiển thị theo ngôn ngữ đang chọn
+const REASONS = [['Ngôn từ xúc phạm', 'rAbuse'], ['Spam / quảng cáo', 'rSpam'], ['Lộ thông tin cá nhân', 'rPrivate'], ['Nội dung không phù hợp', 'rInappropriate']];
 
 /**
  * source: 'feed' | 'random' | 'season' | 'saved' | 'future' | 'mine'
  */
 export default function Viewer({ letter, source, seasonName, ctx, onClose, onNext }) {
   const { profile, toast, savedIds, toggleSave } = ctx;
+  const { t, f, moodLabel, timeAgo } = useLang();
   const [phase, setPhase] = useState('opening');
   const [flipped, setFlipped] = useState(false);
   const [draft, setDraft] = useState('');
@@ -50,7 +53,7 @@ export default function Viewer({ letter, source, seasonName, ctx, onClose, onNex
       setHugged(true); setHugs((h) => h + 1); setBurst(true);
       timers.current.push(setTimeout(() => setBurst(false), 1100));
       const { error } = await supabase.from('hugs').insert({ letter_id: letter.id });
-      if (error) { setHugged(false); setHugs((h) => h - 1); toast(viError(error)); }
+      if (error) { setHugged(false); setHugs((h) => h - 1); toast(errText(error, t)); }
     }
   }
 
@@ -60,25 +63,25 @@ export default function Viewer({ letter, source, seasonName, ctx, onClose, onNex
     setSending(true);
     const { error } = await supabase.from('replies').insert({ letter_id: letter.id, body });
     setSending(false);
-    if (error) { toast(viError(error)); return; }
+    if (error) { toast(errText(error, t)); return; }
     setDraft(''); setFlipped(false); setReplied(true);
-    toast('Hồi âm đã bay đến người viết thư.');
+    toast(t.tReplied);
   }
 
   async function report(reason) {
     setReportOpen(false);
     const { error } = await supabase.from('reports').insert({ target_type: 'letter', target_id: letter.id, reason });
-    toast(error ? viError(error) : 'Cảm ơn bạn. Quản trị viên sẽ xem lá thư này sớm.');
+    toast(error ? errText(error, t) : t.tReported);
   }
 
   const paperCls = `paper-${letter.paper}`;
-  const caption = source === 'random' ? 'Một lá thư rút ngẫu nhiên từ Hòm thư chung'
-    : isScroll ? `Cuộn thư từ hũ ${seasonName || ''}`
-    : isFuture ? `Thư bạn viết ngày ${fmtDate(letter.created_at)}`
-    : isMine ? 'Thư của bạn' : 'Một lá thư trong Hòm thư chung';
+  const caption = source === 'random' ? t.readRandom
+    : isScroll ? f('readScroll', { name: seasonName || '' })
+    : isFuture ? f('fromYouOn', { d: fmtDate(letter.created_at) })
+    : isMine ? t.yourLetter : t.readPublic;
 
   return (
-    <div className="overlay" role="dialog" aria-modal="true" aria-label="Lá thư" onClick={(e) => { if (e.target === e.currentTarget && phase === 'read') onClose(); }}>
+    <div className="overlay" role="dialog" aria-modal="true" aria-label={t.letterWord} onClick={(e) => { if (e.target === e.currentTarget && phase === 'read') onClose(); }}>
       {phase === 'opening' && !isScroll && (
         <div className="stage">
           <div className="env">
@@ -88,13 +91,13 @@ export default function Viewer({ letter, source, seasonName, ctx, onClose, onNex
             <div className="env-flap" />
             <div className="env-seal" />
           </div>
-          <p className="stage-cap">{source === 'random' ? 'Một lá thư vừa đến với bạn…' : isFuture ? 'Thư từ chính bạn đã đến…' : 'Đang mở lá thư…'}</p>
+          <p className="stage-cap">{source === 'random' ? t.capRandom : isFuture ? t.capFuture : t.capOpening}</p>
         </div>
       )}
       {phase === 'opening' && isScroll && (
         <div className="stage stage-scroll">
           <div className="unroll"><div className="rod" /><div className="unroll-paper">{letter.body}</div><div className="rod" /></div>
-          <p className="stage-cap">Đang mở cuộn thư…</p>
+          <p className="stage-cap">{t.openingScroll}</p>
         </div>
       )}
 
@@ -102,7 +105,7 @@ export default function Viewer({ letter, source, seasonName, ctx, onClose, onNex
         <div className="viewer">
           <div className="viewer-top">
             <span className="display" style={{ fontStyle: 'italic', fontSize: 17 }}>{caption}</span>
-            <button className="icon-btn" onClick={onClose} aria-label="Đóng lá thư"><IconClose /></button>
+            <button className="icon-btn" onClick={onClose} aria-label={t.closeLetter}><IconClose /></button>
           </div>
           <div className={flipped ? 'flip is-flipped' : 'flip'}>
             <div className="flip-inner">
@@ -115,15 +118,15 @@ export default function Viewer({ letter, source, seasonName, ctx, onClose, onNex
                     </div>
                     {letter.song && (
                       <span className="song"><span className="music-ic"><IconMusic size={14} sw={2.2} /></span>
-                        <span>Bài hát người viết đang nghe: <strong>{letter.song}</strong></span></span>
+                        <span>{t.songWriter} <strong>{letter.song}</strong></span></span>
                     )}
                   </div>
                   <span className={`stamp stamp-lg stamp-${letter.stamp}`} aria-hidden="true"><i /></span>
                 </div>
                 <div className={`face-body lined pat-${letter.pattern}`}>
-                  <p style={{ margin: 0 }}>{isFuture ? 'Gửi mình của tương lai,' : 'Gửi người lạ,'}</p>
+                  <p style={{ margin: 0 }}>{isFuture ? t.greetFuture : t.greetStranger}</p>
                   <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{letter.body}</p>
-                  <p style={{ margin: '36px 0 0', textAlign: 'right' }}>— {letter.sign || (isFuture ? 'Chính bạn' : 'Một người lạ')}</p>
+                  <p style={{ margin: '36px 0 0', textAlign: 'right' }}>— {letter.sign || (isFuture ? t.yourself : t.aStrangerCap)}</p>
                 </div>
                 <div className="face-foot">
                   {burst && [1, 2, 3].map((n) => <span key={n} className={`burst b${n}`}><IconHeart filled size={18 + n * 2} /></span>)}
@@ -131,53 +134,53 @@ export default function Viewer({ letter, source, seasonName, ctx, onClose, onNex
                     <>
                       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', position: 'relative' }}>
                         <button className={saved ? 'btn pbtn is-on' : 'btn pbtn'} onClick={() => toggleSave(letter)} aria-pressed={saved} style={{ height: 44, padding: '0 16px' }}>
-                          <IconBookmark size={17} />{saved ? 'Đã giữ lại' : 'Giữ lại'}</button>
-                        <button className="btn pbtn" onClick={() => setReportOpen(!reportOpen)} aria-expanded={reportOpen} aria-label="Báo cáo lá thư" style={{ height: 44, padding: '0 14px' }}><IconFlag size={17} /></button>
+                          <IconBookmark size={17} />{saved ? t.kept : t.keep}</button>
+                        <button className="btn pbtn" onClick={() => setReportOpen(!reportOpen)} aria-expanded={reportOpen} aria-label={t.reportAria} style={{ height: 44, padding: '0 14px' }}><IconFlag size={17} /></button>
                         {reportOpen && (
                           <div className="report-menu" role="menu">
-                            <span className="lbl" style={{ padding: '4px 8px' }}>Báo cáo vì…</span>
-                            {REASONS.map((r) => <button key={r} role="menuitem" onClick={() => report(r)}>{r}</button>)}
+                            <span className="lbl" style={{ padding: '4px 8px' }}>{t.reportBecause}</span>
+                            {REASONS.map(([r, k]) => <button key={r} role="menuitem" onClick={() => report(r)}>{t[k]}</button>)}
                           </div>
                         )}
                       </div>
                       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-                        {replied && <span style={{ fontSize: 13, opacity: 0.75 }}>Bạn đã hồi âm lá thư này</span>}
+                        {replied && <span style={{ fontSize: 13, opacity: 0.75 }}>{t.youReplied}</span>}
                         <button className={hugged ? 'btn pbtn is-on' : 'btn pbtn'} onClick={toggleHug} aria-pressed={hugged}>
-                          <IconHeart filled={hugged} />{hugged ? 'Đã ôm' : 'Ôm bạn'} · {hugs}</button>
-                        <button className="btn btn-primary" onClick={() => setFlipped(true)}><IconReply size={17} />Gửi hồi âm</button>
+                          <IconHeart filled={hugged} />{hugged ? t.hugged : t.hugYou} · {hugs}</button>
+                        <button className="btn btn-primary" onClick={() => setFlipped(true)}><IconReply size={17} />{t.sendReply}</button>
                       </div>
                     </>
                   )}
                   {isMine && !isFuture && (
                     <>
-                      <span style={{ fontSize: 14, opacity: 0.8 }}>Đây là thư của bạn · {hugs} cái ôm</span>
-                      {ctx.goMine && <button className="btn btn-primary" onClick={() => { onClose(); ctx.goMine(); }}>Xem hồi âm</button>}
+                      <span style={{ fontSize: 14, opacity: 0.8 }}>{f('mineView', { n: hugs })}</span>
+                      {ctx.goMine && <button className="btn btn-primary" onClick={() => { onClose(); ctx.goMine(); }}>{t.viewReplies}</button>}
                     </>
                   )}
                   {isFuture && (
                     <>
-                      <span style={{ fontSize: 14, opacity: 0.8 }}>Thư từ chính bạn — chỉ mình bạn đọc được.</span>
-                      <button className="btn btn-primary" onClick={onClose}>Gấp thư lại</button>
+                      <span style={{ fontSize: 14, opacity: 0.8 }}>{t.futureOnlyYou}</span>
+                      <button className="btn btn-primary" onClick={onClose}>{t.foldLetter}</button>
                     </>
                   )}
-                  {onNext && <button className="btn pbtn" onClick={onNext} style={{ width: '100%' }}>Rút lá khác</button>}
+                  {onNext && <button className="btn pbtn" onClick={onNext} style={{ width: '100%' }}>{t.nextLetter}</button>}
                 </div>
               </div>
 
               <div className={`face face-back sheet ${paperCls}`} aria-hidden={!flipped}>
                 <div className="face-head">
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <span className="display" style={{ fontSize: 22, fontWeight: 600 }}>Mặt sau lá thư</span>
-                    <span style={{ fontSize: 14, opacity: 0.75, lineHeight: 1.5 }}>Hồi âm của bạn chỉ người viết thư đọc được.</span>
+                    <span className="display" style={{ fontSize: 22, fontWeight: 600 }}>{t.backSide}</span>
+                    <span style={{ fontSize: 14, opacity: 0.75, lineHeight: 1.5 }}>{t.backNote}</span>
                   </div>
                   <span className={`stamp stamp-lg stamp-${letter.stamp}`} aria-hidden="true" style={{ transform: 'rotate(-6deg)', opacity: 0.5 }}><i /></span>
                 </div>
-                <label htmlFor="reply-area" className="sr">Viết hồi âm</label>
-                <textarea id="reply-area" className={`reply-area lined pat-${letter.pattern}`} maxLength={800} placeholder="Gửi người viết lá thư này…"
+                <label htmlFor="reply-area" className="sr">{t.writeReply}</label>
+                <textarea id="reply-area" className={`reply-area lined pat-${letter.pattern}`} maxLength={800} placeholder={t.replyPh}
                   value={draft} onChange={(e) => setDraft(e.target.value)} tabIndex={flipped ? 0 : -1} />
                 <div className="face-foot">
-                  <button className="btn pbtn" onClick={() => setFlipped(false)} tabIndex={flipped ? 0 : -1}><IconFlip size={17} />Lật lại mặt trước</button>
-                  <button className="btn btn-primary" onClick={sendReply} disabled={!draft.trim() || sending} tabIndex={flipped ? 0 : -1}>{sending ? 'Đang gửi…' : 'Gửi hồi âm'}</button>
+                  <button className="btn pbtn" onClick={() => setFlipped(false)} tabIndex={flipped ? 0 : -1}><IconFlip size={17} />{t.flipFront}</button>
+                  <button className="btn btn-primary" onClick={sendReply} disabled={!draft.trim() || sending} tabIndex={flipped ? 0 : -1}>{sending ? t.sending : t.sendReply}</button>
                 </div>
               </div>
             </div>

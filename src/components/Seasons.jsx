@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
-import { supabase, viError } from '../lib/supabase.js';
+import { supabase, errText } from '../lib/supabase.js';
+import { useLang } from '../lib/i18n.jsx';
 import { seasonStatus, yearOptions, yearRange } from '../lib/constants.js';
 import { LETTER_FIELDS } from './Feed.jsx';
 
 const BPOS = [[44, 372, -10], [98, 392, 6], [150, 366, -4], [198, 404, 12], [66, 462, 16], [126, 474, -14], [180, 484, 8], [30, 486, -4]];
 
 function Bottle({ ribbon, sealed, scrolls, onOpen }) {
+  const { t } = useLang();
   return (
     <div className="bottle-wrap">
       <div className="bottle" style={{ '--ribbon': ribbon }}>
@@ -18,7 +20,7 @@ function Bottle({ ribbon, sealed, scrolls, onOpen }) {
           <rect className="g-glass" x="84" y="58" width="72" height="22" rx="10" />
         </svg>
         {scrolls.slice(0, 8).map((s, i) => (
-          <button key={s.id} className="scroll-btn" onClick={() => onOpen(s)} aria-label={`Mở cuộn thư số ${i + 1}`}
+          <button key={s.id} className="scroll-btn" onClick={() => onOpen(s)} aria-label={`${t.openScroll} ${i + 1}`}
             style={{ left: BPOS[i][0], top: BPOS[i][1], transform: `rotate(${BPOS[i][2]}deg)` }}>
             <span className="scroll" style={{ animationDelay: `${-((i * 0.7) % 4)}s` }} />
           </button>
@@ -35,6 +37,7 @@ function Bottle({ ribbon, sealed, scrolls, onOpen }) {
 }
 
 export default function Seasons({ ctx, initialSeason, refreshKey }) {
+  const { t, f } = useLang();
   const [seasons, setSeasons] = useState(null);
   const [sid, setSid] = useState(initialSeason || null);
   const [year, setYear] = useState('all');
@@ -62,8 +65,8 @@ export default function Seasons({ ctx, initialSeason, refreshKey }) {
     q.then(({ data, count }) => { setScrolls(data || []); setTotal(count || 0); });
   }, [sid, year, reload, refreshKey]);
 
-  if (!seasons) return <p className="empty">Đang tải…</p>;
-  if (!seasons.length) return <p className="empty">Chưa có hũ thư mùa nào. Quản trị viên sẽ sớm mở hũ đầu tiên.</p>;
+  if (!seasons) return <p className="empty">{t.loading}</p>;
+  if (!seasons.length) return <p className="empty">{t.noSeasons}</p>;
 
   const season = seasons.find((s) => s.id === sid) || seasons[0];
   const st = seasonStatus(season);
@@ -72,29 +75,29 @@ export default function Seasons({ ctx, initialSeason, refreshKey }) {
     const body = draft.trim();
     if (body.length < 5) return;
     const { error } = await supabase.from('letters').insert({ kind: 'scroll', season_id: season.id, mood: season.name, body, stamp: 'hoa' });
-    if (error) { ctx.toast(viError(error)); return; }
+    if (error) { ctx.toast(errText(error, t)); return; }
     setDraft(''); setReload((r) => r + 1);
-    ctx.toast('Cuộn thư của bạn đã nằm trong chai.');
+    ctx.toast(t.tScrollBottle);
   }
 
   const countLabel = total === 0
-    ? (year === 'all' ? 'Chưa có cuộn thư nào trong chai.' : `Năm ${year} chưa có cuộn thư nào cho dịp này.`)
-    : `Trong chai có ${total} cuộn thư${total > 8 ? ' — đang hiện 8 cuộn mới nhất' : ''}. Chạm vào một cuộn để mở.`;
+    ? (year === 'all' ? t.scrollNone : f('scrollNoneYear', { y: year }))
+    : f(total > 8 ? 'scrollCount8' : 'scrollCount', { n: total });
 
   return (
     <section style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
       <div>
-        <p className="eyebrow">Hũ thư theo mùa</p>
-        <h1 className="display h-md">Mỗi mùa, một chiếc hũ.</h1>
+        <p className="eyebrow">{t.seasonEyebrow}</p>
+        <h1 className="display h-md">{t.seasonH1}</h1>
       </div>
       <div className="filter-row">
-        <div className="chips" role="group" aria-label="Chọn mùa">
+        <div className="chips" role="group" aria-label={t.pickSeason}>
           {seasons.map((s) => <button key={s.id} className={s.id === season.id ? 'chip is-on' : 'chip'} aria-pressed={s.id === season.id} onClick={() => setSid(s.id)}>{s.name}</button>)}
         </div>
         <div className="year-pick">
-          <label htmlFor="season-year">Năm</label>
+          <label htmlFor="season-year">{t.year}</label>
           <select id="season-year" className="year-select" value={year} onChange={(e) => setYear(e.target.value === 'all' ? 'all' : Number(e.target.value))}>
-            <option value="all">Tất cả các năm</option>
+            <option value="all">{t.allYears}</option>
             {yearOptions().map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
@@ -105,18 +108,18 @@ export default function Seasons({ ctx, initialSeason, refreshKey }) {
             onOpen={(s) => ctx.openLetter(s, 'season', season.name)} />
         </div>
         <div className="season-info">
-          <h2 className="display" style={{ margin: 0, fontSize: 'clamp(28px, 3vw, 40px)', fontWeight: 600, lineHeight: 1.15 }}>Hũ thư {season.name}</h2>
+          <h2 className="display" style={{ margin: 0, fontSize: 'clamp(28px, 3vw, 40px)', fontWeight: 600, lineHeight: 1.15 }}>{f('seasonTitle', { name: season.name })}</h2>
           {season.description && <p className="lead">{season.description}</p>}
-          {st === 'soon' && <p className="display note-soft">Chưa đến thời gian mở, hãy chờ xíu nhé.</p>}
-          {st === 'closed' && <p className="display note-soft">Đã qua dịp này rồi. Hãy cùng đọc lại những lá thư nhé.</p>}
+          {st === 'soon' && <p className="display note-soft">{t.seasonSoon}</p>}
+          {st === 'closed' && <p className="display note-soft">{t.seasonClosed}</p>}
           {st !== 'soon' && <p style={{ margin: 0, fontSize: 15 }}>{countLabel}</p>}
           {st === 'open' && (
             <div className="panel" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <label htmlFor="scroll-input" className="label">Thả một cuộn thư vào hũ</label>
+              <label htmlFor="scroll-input" className="label">{t.dropScroll}</label>
               <textarea id="scroll-input" className="lined sheet paper-kem pat-lines scroll-input" rows={4} maxLength={400}
-                placeholder="Viết vài dòng cho mùa này…" value={draft} onChange={(e) => setDraft(e.target.value)} />
+                placeholder={t.scrollPh} value={draft} onChange={(e) => setDraft(e.target.value)} />
               <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <button className="btn btn-primary" onClick={submit} disabled={draft.trim().length < 5}>Cuộn lại &amp; thả vào hũ</button>
+                <button className="btn btn-primary" onClick={submit} disabled={draft.trim().length < 5}>{t.rollDrop}</button>
               </div>
             </div>
           )}

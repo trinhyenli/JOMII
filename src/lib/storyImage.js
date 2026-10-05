@@ -92,7 +92,8 @@ function drawLogo(ctx, cx, y) {
  * mode: 'letter' | 'reply' | 'both'
  * Trả về Blob PNG 1080×1920.
  */
-export async function makeStoryImage({ letter, reply, mode }) {
+export async function makeStoryImage({ letter, reply, mode, labels = {} }) {
+  const L = { dear: 'Gửi người lạ,', stranger: 'một người lạ', replyFrom: 'Hồi âm từ một người lạ', ...labels };
   try {
     await Promise.all([
       document.fonts.load('48px "Patrick Hand"'),
@@ -120,7 +121,7 @@ export async function makeStoryImage({ letter, reply, mode }) {
   const both = mode === 'both' && reply;
   let letterBottom = 200;
   if (showLetter) {
-    const opt = { x: 150, w: W - 300, text: `Gửi người lạ,\n${letter.body}`, paper: letter.paper, fontSize: 48, maxLines: both ? 10 : 14, label: letter.sign ? `— ${letter.sign}` : '— một người lạ' };
+    const opt = { x: 150, w: W - 300, text: `${L.dear}\n${letter.body}`, paper: letter.paper, fontSize: 48, maxLines: both ? 10 : 14, label: letter.sign ? `— ${letter.sign}` : `— ${L.stranger}` };
     const h = noteHeight(noteLines(ctx, opt), opt.fontSize, opt.label);
     // đáy lá thư nhét nhẹ vào túi phong bì; hồi âm (nếu có) nằm đè phía trước
     const y = Math.max(150, ey + 80 - h);
@@ -134,10 +135,10 @@ export async function makeStoryImage({ letter, reply, mode }) {
   ctx.arcTo(ex + ew, ey + eh, ex + ew - 28, ey + eh, 28); ctx.lineTo(ex + 28, ey + eh); ctx.arcTo(ex, ey + eh, ex, ey + eh - 28, 28); ctx.closePath(); ctx.fill();
 
   if (reply && mode === 'both') {
-    drawNote(ctx, { x: 200, y: Math.max(ey + 40, Math.min(letterBottom - 60, ey + 120)), w: W - 300, text: reply.body, paper: 'kem', fontSize: 40, maxLines: 5, label: 'Hồi âm từ một người lạ', rotate: -3 });
+    drawNote(ctx, { x: 200, y: Math.max(ey + 40, Math.min(letterBottom - 60, ey + 120)), w: W - 300, text: reply.body, paper: 'kem', fontSize: 40, maxLines: 5, label: L.replyFrom, rotate: -3 });
   }
   if (reply && mode === 'reply') {
-    drawNote(ctx, { x: 130, y: 560, w: W - 260, text: reply.body, paper: 'kem', fontSize: 56, maxLines: 9, label: 'Hồi âm từ một người lạ', rotate: -2 });
+    drawNote(ctx, { x: 130, y: 560, w: W - 260, text: reply.body, paper: 'kem', fontSize: 56, maxLines: 9, label: L.replyFrom, rotate: -2 });
   }
 
   drawLogo(ctx, W / 2, H - 90);

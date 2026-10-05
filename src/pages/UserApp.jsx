@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { supabase, viError } from '../lib/supabase.js';
+import { supabase, errText } from '../lib/supabase.js';
+import { useLang, LangSwitch } from '../lib/i18n.jsx';
 import { COLOR_THEMES, SCENE_THEMES } from '../lib/constants.js';
 import { HugLogo, IconPalette, IconPen, IconClose, IconLogout } from '../components/Icons.jsx';
 import Feed from '../components/Feed.jsx';
@@ -11,11 +12,13 @@ import Write from '../components/Write.jsx';
 import Mine from '../components/Mine.jsx';
 import Viewer from '../components/Viewer.jsx';
 
-const NAV = [['home', 'Hòm thư'], ['random', 'Thư ngẫu nhiên'], ['message', 'Thông điệp'], ['season', 'Hũ thư mùa'], ['future', 'Thư tương lai'], ['mine', 'Của tôi']];
+const NAV = [['home', 'navHome'], ['random', 'navRandom'], ['message', 'navMessage'], ['season', 'navSeason'], ['future', 'navFuture'], ['mine', 'navMine']];
+const THEME_KEYS = { hong: 'thHong', cam: 'thCam', dem: 'thDem', donsac: 'thDonsac', bacha: 'thBacha', sky: 'scSky', heaven: 'scHeaven', nature: 'scNature', beach: 'scBeach', nightbeach: 'scNight' };
 
 function readTheme() { try { return localStorage.getItem('jomi-theme') || 'hong'; } catch (e) { return 'hong'; } }
 
 export default function UserApp({ profile, onSignOut, onBackToAdmin }) {
+  const { t } = useLang();
   const [screen, setScreen] = useState('home');
   const [seasonArg, setSeasonArg] = useState(null);
   const [theme, setTheme] = useState(readTheme);
@@ -50,14 +53,14 @@ export default function UserApp({ profile, onSignOut, onBackToAdmin }) {
     } else {
       next.add(letter.id); setSavedIds(next);
       const { error } = await supabase.from('saves').insert({ letter_id: letter.id });
-      if (error) toast(viError(error)); else toast('Đã giữ lại trong mục Của tôi.');
+      if (error) toast(errText(error, t)); else toast(t.tKept);
     }
   }
 
   async function nextRandom() {
     const { data } = await supabase.rpc('random_letter', { exclude: viewer ? viewer.letter.id : null });
     if (data && data.length) setViewer({ letter: data[0], source: 'random' });
-    else toast('Chưa có thêm lá thư nào khác.');
+    else toast(t.noMore);
   }
 
   async function dismissNotice(n) {
@@ -78,37 +81,38 @@ export default function UserApp({ profile, onSignOut, onBackToAdmin }) {
       <header className="topbar">
         <div className="topbar-in">
           <div className="topbar-row">
-            <button className="nav-btn logo-btn" onClick={() => go('home')} aria-label="JOMI — về Hòm thư">
+            <button className="nav-btn logo-btn" onClick={() => go('home')} aria-label={t.logoAria}>
               <HugLogo size={32} />
               <span className="display" style={{ fontSize: 26, fontWeight: 600, letterSpacing: '0.08em' }}>JOMI</span>
             </button>
             <div className="row-gap" style={{ gap: 10, alignItems: 'center' }}>
+              <LangSwitch />
               <div style={{ position: 'relative' }}>
-                <button className="btn btn-ghost sm" onClick={() => setThemeOpen(!themeOpen)} aria-expanded={themeOpen}><IconPalette />Giao diện</button>
+                <button className="btn btn-ghost sm" onClick={() => setThemeOpen(!themeOpen)} aria-expanded={themeOpen}><IconPalette /><span className="hide-xs">{t.look}</span></button>
                 {themeOpen && (
-                  <div className="pop" role="dialog" aria-label="Chọn giao diện">
+                  <div className="pop" role="dialog" aria-label={t.pickTheme}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span className="display" style={{ fontSize: 19, fontWeight: 600 }}>Giao diện</span>
-                      <button className="icon-btn" style={{ width: 36, height: 36 }} onClick={() => setThemeOpen(false)} aria-label="Đóng"><IconClose size={16} /></button>
+                      <span className="display" style={{ fontSize: 19, fontWeight: 600 }}>{t.look}</span>
+                      <button className="icon-btn" style={{ width: 36, height: 36 }} onClick={() => setThemeOpen(false)} aria-label={t.close}><IconClose size={16} /></button>
                     </div>
-                    <div className="fieldset"><span className="label">Màu sắc</span>
+                    <div className="fieldset"><span className="label">{t.colors}</span>
                       <div className="chips" style={{ gap: 12 }}>
-                        {COLOR_THEMES.map(([id, label]) => <button key={id} className={`sw sw-${id}${theme === id ? ' is-on' : ''}`} onClick={() => setTheme(id)} aria-label={`Màu ${label}`} title={label} aria-pressed={theme === id} />)}
+                        {COLOR_THEMES.map(([id, label]) => <button key={id} className={`sw sw-${id}${theme === id ? ' is-on' : ''}`} onClick={() => setTheme(id)} aria-label={`${t.colorWord} ${t[THEME_KEYS[id]]}`} title={t[THEME_KEYS[id]]} aria-pressed={theme === id} />)}
                       </div>
                     </div>
-                    <div className="fieldset"><span className="label">Chủ đề</span>
+                    <div className="fieldset"><span className="label">{t.scenes}</span>
                       <div className="grid-3">
-                        {SCENE_THEMES.map(([id, label]) => <button key={id} className={theme === id ? 'tile is-on' : 'tile'} onClick={() => setTheme(id)} aria-pressed={theme === id}><span className={`tp tp-${id}`} />{label}</button>)}
+                        {SCENE_THEMES.map(([id, label]) => <button key={id} className={theme === id ? 'tile is-on' : 'tile'} onClick={() => setTheme(id)} aria-pressed={theme === id}><span className={`tp tp-${id}`} />{t[THEME_KEYS[id]]}</button>)}
                       </div>
                     </div>
                   </div>
                 )}
               </div>
-              <button className="btn btn-primary sm hide-xs" onClick={() => go('write')}><IconPen size={17} />Viết thư</button>
+              <button className="btn btn-primary sm hide-xs" onClick={() => go('write')}><IconPen size={17} />{t.write}</button>
             </div>
           </div>
-          <nav className="navrow" aria-label="Điều hướng chính">
-            {NAV.map(([id, label]) => <button key={id} className={screen === id ? 'nav-btn is-active' : 'nav-btn'} aria-current={screen === id ? 'page' : undefined} onClick={() => go(id)}>{label}</button>)}
+          <nav className="navrow" aria-label={t.mainNav}>
+            {NAV.map(([id, label]) => <button key={id} className={screen === id ? 'nav-btn is-active' : 'nav-btn'} aria-current={screen === id ? 'page' : undefined} onClick={() => go(id)}>{t[label]}</button>)}
           </nav>
         </div>
       </header>
@@ -118,7 +122,7 @@ export default function UserApp({ profile, onSignOut, onBackToAdmin }) {
           <div key={n.id} className="panel notice" role="status">
             <HugLogo size={28} />
             <p>{n.body}</p>
-            <button className="icon-btn" onClick={() => dismissNotice(n)} aria-label="Đã đọc"><IconClose size={16} /></button>
+            <button className="icon-btn" onClick={() => dismissNotice(n)} aria-label={t.markRead}><IconClose size={16} /></button>
           </div>
         ))}
         {screen === 'home' && <Feed ctx={ctx} go={go} refreshKey={refreshKey} />}
@@ -132,10 +136,10 @@ export default function UserApp({ profile, onSignOut, onBackToAdmin }) {
 
       <footer className="footer">
         <div className="footer-in">
-          <span className="display" style={{ fontStyle: 'italic' }}>JOMI — một cái ôm bằng lời, gửi người lạ · @{profile.username}</span>
+          <span className="display" style={{ fontStyle: 'italic' }}>{t.footer} · @{profile.username}</span>
           <div className="row-gap">
-            {onBackToAdmin && <button className="btn btn-ghost sm" onClick={onBackToAdmin}>Về trang quản trị</button>}
-            <button className="btn btn-ghost sm" onClick={onSignOut}><IconLogout size={16} />Đăng xuất</button>
+            {onBackToAdmin && <button className="btn btn-ghost sm" onClick={onBackToAdmin}>{t.backToAdmin}</button>}
+            <button className="btn btn-ghost sm" onClick={onSignOut}><IconLogout size={16} />{t.logout}</button>
           </div>
         </div>
       </footer>

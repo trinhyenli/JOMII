@@ -47,9 +47,12 @@ JOMI chỉ dùng tên đăng nhập + mật khẩu. Ở phía sau, tên được
 
 ## Bước 4 — Chạy thử trên máy
 
-Cần cài [Node.js](https://nodejs.org) bản 18 trở lên.
+Cần cài [Node.js](https://nodejs.org) bản 22 (LTS) trở lên.
 
-1. Supabase → **Project Settings → API** (hoặc **Data API**): copy **Project URL** và khoá **anon public**.
+1. Lấy 2 thông tin trong Supabase:
+   - **URL:** mục **Data API** → ô **API URL** (dạng `https://xxxxxxxx.supabase.co`).
+   - **Khoá:** bấm biểu tượng bánh răng **Project Settings** (góc dưới bên trái) → **API Keys** → copy **Publishable key** (bắt đầu bằng `sb_publishable_`). Nếu dự án của bạn còn tab **Legacy API Keys** thì khoá **anon public** (bắt đầu bằng `eyJ`) cũng dùng được.
+   - **Không** dùng **Secret key** / `service_role`.
 2. Trong thư mục `jomi`, copy file `.env.example` thành `.env` rồi điền:
    ```
    VITE_SUPABASE_URL=https://xxxxxxxx.supabase.co
