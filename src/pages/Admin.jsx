@@ -50,19 +50,19 @@ function Overview({ go, pending, support }) {
 
   return (
     <>
-      <div className="ad-head">
+      <div className="qt-head">
         <div><h1 className="display">Tổng quan</h1><p className="sub">Số liệu thật từ cơ sở dữ liệu</p></div>
         <button className="btn btn-primary" onClick={() => go('moderation')}>Xử lý {pending} báo cáo</button>
       </div>
-      <div className="ad-tiles">
+      <div className="qt-tiles">
         {tiles.map(([label, v, note]) => (
           <div key={label} className="card tile-stat"><span className="sub">{label}</span><span className="display big">{v ?? '…'}</span><span className="sub">{note}</span></div>
         ))}
         <div className="card tile-stat"><span className="sub">Báo cáo chờ xử lý</span><span className="display big">{pending}</span>
           <span className={support ? 'badge b-info' : 'badge b-neutral'} style={{ alignSelf: 'flex-start' }}>{support} cần hỗ trợ</span></div>
       </div>
-      <div className="ad-split">
-        <section className="card ad-chart">
+      <div className="qt-split">
+        <section className="card qt-chart">
           <div><h2>Thư mới mỗi ngày</h2><p className="sub">14 ngày gần nhất · rê chuột lên cột để xem số</p></div>
           <div className="bars" role="img" aria-label="Biểu đồ cột số thư mới mỗi ngày trong 14 ngày">
             {daily.map((d) => (
@@ -74,7 +74,7 @@ function Overview({ go, pending, support }) {
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--muted)' }}><span>{daily[0]?.label}</span><span>{daily[daily.length - 1]?.label}</span></div>
         </section>
-        <section className="card ad-moods">
+        <section className="card qt-moods">
           <h2>Thư theo tâm trạng (14 ngày)</h2>
           {moods.map((m) => (
             <div key={m.label} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -84,7 +84,7 @@ function Overview({ go, pending, support }) {
           ))}
         </section>
       </div>
-      <section className="card ad-row">
+      <section className="card qt-row">
         <div style={{ flex: '1 1 300px' }}>
           <h2>Hũ thư đang mở: {openSeason ? openSeason.name : 'chưa có'}</h2>
           <p className="sub">{openSeason ? `${fmtIsoDate(openSeason.open_date)} – ${fmtIsoDate(openSeason.close_date)}` : 'Không có hũ nào đang mở.'}</p>
@@ -111,7 +111,7 @@ function Moderation({ reports, reload, toast }) {
   return (
     <>
       <div><h1 className="display">Kiểm duyệt</h1><p className="sub">Nội dung bị người dùng báo cáo hoặc bị hệ thống tự gắn cờ. Mục “Cần hỗ trợ” luôn nằm trên cùng.</p></div>
-      <div className="ad-filters">
+      <div className="qt-filters">
         <div className="row-gap">
           <button className={tab === 'pending' ? 'chip is-on' : 'chip'} onClick={() => setTab('pending')}>Chờ xử lý ({pendingCount})</button>
           <button className={tab === 'done' ? 'chip is-on' : 'chip'} onClick={() => setTab('done')}>Đã xử lý ({reports.length - pendingCount})</button>
@@ -122,14 +122,14 @@ function Moderation({ reports, reload, toast }) {
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         {list.map((r) => (
-          <article key={r.id} className="card ad-report">
+          <article key={r.id} className="card qt-report">
             <div className="row-gap" style={{ alignItems: 'center' }}>
               <span className={PRIO[r.priority][1]}>{PRIO[r.priority][0]}</span>
               <span className="badge b-neutral">{TYPE_LABEL[r.target_type]}</span>
               <span className="sub">{r.reason} · {r.report_count} lượt · {timeAgo(r.created_at)}</span>
               {r.status !== 'pending' && <span className={RESULT[r.status][1]} style={{ marginLeft: 'auto' }}>{RESULT[r.status][0]}</span>}
             </div>
-            <p className="hand ad-quote">{r.content || '(nội dung đã bị xoá)'}</p>
+            <p className="hand qt-quote">{r.content || '(nội dung đã bị xoá)'}</p>
             {r.priority === 'support' && r.status === 'pending' && (
               <p className="sub" style={{ color: 'var(--info)' }}>Gợi ý: gửi lời nhắn hỗ trợ ẩn danh kèm thông tin đường dây hỗ trợ tâm lý tới người viết. Không nên xoá ngay — người viết có thể đang cần được lắng nghe.</p>
             )}
@@ -208,16 +208,16 @@ function Seasons({ toast }) {
           </tbody>
         </table>
       </div>
-      <section className="card ad-form">
+      <section className="card qt-form">
         <h2>Tạo hũ thư mới</h2>
-        <div className="ad-grid3">
+        <div className="qt-grid3">
           <div className="fs"><label htmlFor="s-name" className="lbl">Tên dịp</label><input id="s-name" className="field" maxLength={30} placeholder="Ví dụ: Ngày của Mẹ" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
           <div className="fs"><label htmlFor="s-open" className="lbl">Ngày mở</label><input id="s-open" className="field" type="date" value={f.open_date} onChange={(e) => setF({ ...f, open_date: e.target.value })} /></div>
           <div className="fs"><label htmlFor="s-close" className="lbl">Ngày đóng</label><input id="s-close" className="field" type="date" value={f.close_date} onChange={(e) => setF({ ...f, close_date: e.target.value })} /></div>
         </div>
         <div className="fs"><label htmlFor="s-desc" className="lbl">Lời giới thiệu hiển thị cho người dùng</label>
           <textarea id="s-desc" className="field" rows={3} maxLength={240} placeholder="Một câu mời mọi người thả thư vào hũ…" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></div>
-        <div className="ad-row-between">
+        <div className="qt-row-between">
           <div className="row-gap" style={{ alignItems: 'center' }} role="group" aria-label="Màu ruy băng">
             <span className="lbl">Màu ruy băng</span>
             {RIBBONS.map(([hex, label]) => <button key={hex} className={f.ribbon === hex ? 'sw is-on' : 'sw'} style={{ background: hex }} aria-label={`Màu ${label}`} aria-pressed={f.ribbon === hex} onClick={() => setF({ ...f, ribbon: hex })} />)}
@@ -245,11 +245,11 @@ function Messages({ toast, reload: reloadCounts }) {
   return (
     <>
       <div><h1 className="display">Thông điệp chờ duyệt</h1><p className="sub">Thông điệp ngắn (tối đa 5 dòng) chỉ vào kho rút ngẫu nhiên sau khi duyệt. Đã duyệt: {approved}.</p></div>
-      <div className="ad-msgs">
+      <div className="qt-msgs">
         {rows.map((m) => {
           const n = m.body.split('\n').length;
           return (
-            <article key={m.id} className="card ad-msg">
+            <article key={m.id} className="card qt-msg">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
                 <span className="sub">{timeAgo(m.created_at)}</span><span className={n <= 5 ? 'badge b-good' : 'badge b-crit'}>{n} / 5 dòng</span>
               </div>
@@ -289,7 +289,7 @@ function Safety({ toast }) {
     toast(error ? viError(error) : 'Đã lưu lời nhắn hỗ trợ.');
   }
   const box = (kind, title, desc) => (
-    <section className="card ad-kw">
+    <section className="card qt-kw">
       <div><h2>{title}</h2><p className="sub">{desc}</p></div>
       <div className="row-gap">
         {words.filter((w) => w.kind === kind).map((w) => (
@@ -307,11 +307,11 @@ function Safety({ toast }) {
   return (
     <>
       <div><h1 className="display">Từ khoá &amp; an toàn</h1><p className="sub">Áp dụng tự động cho thư, hồi âm, thông điệp và cuộn thư mới (kiểm tra ở máy chủ).</p></div>
-      <div className="ad-split">
+      <div className="qt-split">
         {box('blocked', 'Từ bị chặn', 'Nội dung chứa các từ này bị ẩn ngay và chuyển vào Kiểm duyệt.')}
         {box('support', 'Từ khoá cần hỗ trợ', 'Không ẩn nội dung. Gắn cờ “Cần hỗ trợ” để bạn gửi lời nhắn hỗ trợ cho người viết.')}
       </div>
-      <section className="card ad-form">
+      <section className="card qt-form">
         <h2>Lời nhắn hỗ trợ gửi tới người viết</h2>
         <label htmlFor="support-text" className="lbl">Nội dung (nhớ thay số đường dây hỗ trợ thật)</label>
         <textarea id="support-text" className="field" rows={3} value={text} onChange={(e) => setText(e.target.value)} />
@@ -340,12 +340,12 @@ export default function Admin({ profile, onSignOut, onViewUser }) {
   const counts = { moderation: pending.length, messages: msgCount };
 
   return (
-    <div className="ad">
-      <aside className="ad-side">
-        <div className="ad-logo">
+    <div className="qt">
+      <aside className="qt-side">
+        <div className="qt-logo">
           <HugLogo size={28} heart="#F48FB1" />
           <span className="display" style={{ fontSize: 22, fontWeight: 600, letterSpacing: '0.08em' }}>JOMI</span>
-          <span className="ad-tag">Admin</span>
+          <span className="qt-tag">Admin</span>
         </div>
         <nav aria-label="Quản trị" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           {NAV.map(([id, label]) => (
@@ -354,13 +354,13 @@ export default function Admin({ profile, onSignOut, onViewUser }) {
             </button>
           ))}
         </nav>
-        <div className="ad-side-foot">
+        <div className="qt-side-foot">
           <button className="side-link" onClick={onViewUser}>Xem trang người dùng</button>
           <button className="side-link" onClick={onSignOut}><IconLogout size={16} />Đăng xuất</button>
           <span className="side-muted">Đang đăng nhập: {profile.username}</span>
         </div>
       </aside>
-      <main className="ad-main">
+      <main className="qt-main">
         {section === 'overview' && <Overview go={setSection} pending={pending.length} support={support} />}
         {section === 'moderation' && <Moderation reports={reports} reload={reload} toast={toast} />}
         {section === 'seasons' && <Seasons toast={toast} />}
